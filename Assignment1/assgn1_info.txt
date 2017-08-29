@@ -1,0 +1,26 @@
+Description:
+====================================================================================================
+Assignment 1 for CS 403/725 Autumn 2017 IITB
+
+This competition will serve as the test ground for your implementation of stochastic gradient descent.
+
+The dataset provided is a standard dataset with some values polluted by noise. You are expected to do appropriate feature engineering on the provided dataset and tune the regularization parameter and the value of p (1<=p<=2) for your p-norm to get the best performance.
+
+The error metric used is RMSE.
+
+Evaluation and Submission:
+====================================================================================================
+Evaluation
+
+The error metric used for evaluation is RMSE.
+
+Submission Format
+
+You are expected to upload a csv file containing your predictions in the following format. Here Id must be same as the Id given in test_features.csv and MUST be in the same order as in test_features.csv while the Output column corresponds to your prediction for that Id.
+
+Id,Output
+1,11
+2,8
+3,91
+4,10.5
+etc.
