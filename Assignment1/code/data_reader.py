@@ -1,7 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 import pandas as pd
-
+import numpy as np
 
 class one_train_info():
     def __init__(self, param_list):
@@ -29,11 +29,20 @@ class reader(object):
         return
 
 
+class model(object):
+    def __init__(self, lamb, p, phi):
+        self.lamb = lamb
+        self.p = p
+        self.phi = np.append(phi, 1)
+        # Reminder to not forget the bias
+        self.weights = np.zeros(self.phi.shape)
+
+    # def calculate_loss(self):
+
+
 if __name__ == '__main__':
     fname = '../data/train.csv'
     all_data = reader(fname)
-    # Regression options:
-    # -- SVR
-    # -- Ridge loss
-    # -- Hinge loss [Lasso]
-    # -- zero norm loss
+    # Regression with p-norm regularization
+    # loss = ||y - y'||^2 + lambda * ||w||^p
+    # Can try to use k-fold cross validation
