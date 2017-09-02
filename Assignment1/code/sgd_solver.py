@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import pdb
 from sgd_template import get_feature_matrix, get_output
+import matplotlib.pyplot as plt
+import re
 import warnings
 warnings.filterwarnings("error")
 # class one_train_info():
@@ -65,7 +67,9 @@ class model(object):
         self.weights = np.zeros(self.phi_matrix.shape[1])
         self.total_ind = self.phi_matrix.shape[0]
 
-        self.lr = 1e-6
+        self.lr = 1e-7
+
+    # def reset_vars(self, feature_matrix, output_vec, )
 
     def complete_loss(self):
         norm2_error = 0
@@ -76,7 +80,7 @@ class model(object):
             # print(norm2_error)
             l1 = self.norm_error_one_ind(i)
             norm2_error += l1 ** 2
-        # norm2_error /= self.total_ind
+        norm2_error /= self.total_ind
         # do not consider bias term in penalty
         penalty = self.lamb * np.sum(np.power(np.abs(self.weights[:-1]), self.p))
         # print(penalty)
@@ -112,20 +116,22 @@ class model(object):
         wj = self.weights[w_ind]
         return self.lamb * self.p * np.abs(wj)**(self.p-1) * np.sign(wj)
 
-    def sgd(self):
+    def sgd(self, nit=5, batch=1e2):
         # Stochastic gradient descent
         # Assuming no shuffling for now
+
+        assert type(batch) is int
         curr_loss = self.complete_loss()
         prev_loss = curr_loss + 10000
-        # for it in range(1000):
-        it = 0
-        while (prev_loss - curr_loss > 1000):
-            it += 1
+        for it in range(nit):
+            # it = 0
+            # while (prev_loss - curr_loss > 100):
+            # it += 1
             for i in range(self.total_ind):
 
                 self.weights = self.one_weight_update(i)
                 # curr_loss = self.complete_loss()
-                if (i % 1e2 == 0):
+                if (i % batch == 0):
                     # print('i=', i)
                     # if True:
                     prev_loss = curr_loss
@@ -169,23 +175,38 @@ class model(object):
         print(rmse)
         return rmse
 
-    def test_printer(self, test_id_list, test_phi):
+    def test_printer(self, test_id_list, test_phi, out_fname):
         str_format = '{},{}\n'
         str_to_write = str_format.format('Id', 'Output')
         for ind, tid in enumerate(test_id_list):
             y_pred = np.dot(test_phi[ind, :], self.weights)
             str_to_write += str_format.format(tid, str(y_pred[0]))
-        with open('../eval/test_eval.csv', 'w') as f:
+        with open('../eval/' + out_fname, 'w') as f:
             f.write(str_to_write)
+
+def plotter():
+    dat_reader = pd.read_csv('../data/train.csv', sep=',')
+
+    x_ax = np.array(pat.findall('\n'.join(dat_reader['date'])), dtype='int')
+    pdb.set_trace()
+    # for x in x_ax:
+    #     x_ax_new.append(int(x.split(' ')[-1].split(':')[0]))
+
+    plt.plot(x_ax[:,1], dat_reader['Output'])
+    plt.show()
 
 
 if __name__ == '__main__':
+
+    pat = re.compile(r'(\d*)-(\d*)-(\d*)\s(\d*):(\d*):(\d*)')
+    plotter()
+    pdb.set_trace()
     fname = '../data/train.csv'
     # fname = '../data/test_features.csv'
     feature_matrix = get_feature_matrix(fname)
     out_vec = get_output(fname)
     lambda_reg = 1
-    p = 2
+    p = 1.5
     # weight_vector = get_weight_vector(feature_matrix, out_vec, lambda_reg, p)
     # Regression with p-norm regularization
     # loss = ||y - y'||^2 + lambda * ||w||^p
@@ -196,13 +217,15 @@ if __name__ == '__main__':
     tot_points = feature_matrix.shape[0]
     tr_pts = int(tot_points * 0.8)
     sgd_model = model(feature_matrix[:tr_pts], out_vec[:tr_pts], lambda_reg, p)
-    # sgd_model.sgd()
+    sgd_model.sgd(10, 1000)
     # sgd_model.complete_loss()
     # test_feature_mat = get_feature_matrix('../data/test_features.csv')
-    sgd_model.p2_direct_solve()
-    # sgd_model.test_accuracy(feature_matrix[tr_pts:], out_vec[tr_pts:])
-    test_fname = '../data/test_features.csv'
-    test_data_reader = pd.read_csv(test_fname, sep=',')
-    test_id_list = test_data_reader['Id']
-    test_feature_mat = get_feature_matrix(test_fname)
-    sgd_model.test_printer(test_id_list, test_feature_mat)
+    # sgd_model.p2_direct_solve()
+    sgd_model.valid_accuracy(feature_matrix[tr_pts:], out_vec[tr_pts:])
+
+    # test_fname = '../data/test_features.csv'
+    # test_data_reader = pd.read_csv(test_fname, sep=',')
+    # test_id_list = test_data_reader['Id']
+    # test_feature_mat = get_feature_matrix(test_fname)
+    # out_fname = 'test_eval_l_' + str(lambda_reg) + '_p_' + str(p) + '.csv'
+    # sgd_model.test_printer(test_id_list, test_feature_mat, out_fname)
