@@ -68,9 +68,15 @@ class model(object):
     def complete_loss(self):
         norm2_error = 0
         for i in range(self.total_ind):
-            norm2_error += self.norm_error_one_ind(i)**2
-        norm2_error /= self.total_ind
+            # norm2_error += (self.norm_error_one_ind(i))**2
+            # l1 = np.dot(self.phi_matrix[i, :], self.weights) - self.y_obs[i]
+            # pdb.set_trace()
+            # print(norm2_error)
+            l1 = self.norm_error_one_ind(i)
+            norm2_error += l1 ** 2
+
         penalty = self.lamb * np.sum(np.power(np.abs(self.weights), self.p))
+        # print(penalty)
         return norm2_error + penalty
 
     def norm_error_one_ind(self, ind):
@@ -125,4 +131,4 @@ if __name__ == '__main__':
     # do a sanity check for the case p=2
     # sgd_model = model(lamb, p, all_data)
     sgd_model = model(feature_matrix, out_vec, lambda_reg, p)
-    sgd_model.sgd()
+    # sgd_model.sgd()
