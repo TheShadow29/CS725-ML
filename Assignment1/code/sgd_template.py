@@ -3,13 +3,15 @@
 import numpy as np
 import pickle
 import pandas as pd
-
+import pdb
+# from sgd_solver import one_train_info, reader, phi_holder, model
 """
 NOTE: All functions mentioned below MUST be implemented
       All functions must be reproducible, i.e., repeated function calls with the
       same parameters must result in the same output. Look into numpy RandomState
       to achieve this.
 """
+
 
 def get_feature_matrix(file_path):
     """
@@ -22,7 +24,27 @@ def get_feature_matrix(file_path):
 
     NOTE: Preserve the order of examples in the file
     """
+    data_reader = pd.read_csv(fname, sep=',')
+    is_test = 'test' in fname
+    # +1 is for bias
+    # For now not using date and time
+    if is_test:
+        phi_matrix = np.zeros((data_reader.last_valid_index() + 1,
+                               len(data_reader.loc[0][2:]) + 1))
+        for ind in range(data_reader.last_valid_index() + 1):
+            d_info = data_reader.loc[ind]
+            phi_matrix[ind, :] = np.append(d_info[2:], 1)
 
+    else:
+        # pdb.set_trace()
+        phi_matrix = np.zeros((data_reader.last_valid_index() + 1,
+                               len(data_reader.loc[0][2:-1]) + 1))
+        pdb.set_trace()
+        for ind in range(data_reader.last_valid_index() + 1):
+            d_info = data_reader.loc[ind]
+            phi_matrix[ind, :] = np.append(d_info[2:-1], 1)
+
+    return phi_matrix
 
 def get_output(file_path):
     """
@@ -33,6 +55,8 @@ def get_output(file_path):
 
     NOTE: Preserve the order of examples in the file
     """
+
+
 
 def get_weight_vector(feature_matrix, output, lambda_reg, p):
     """
@@ -70,3 +94,17 @@ def get_my_best_weight_vector():
           We expect this function to return fast. So you are encouraged to return a pickeled
           file after all your experiments with various values of p and lambda_reg.
     """
+
+
+if __name__ == '__main__':
+    # fname = '../data/train.csv'
+    fname = '../data/test_features.csv'
+    feature_matrix = get_feature_matrix(fname)
+    # Regression with p-norm regularization
+    # loss = ||y - y'||^2 + lambda * ||w||^p
+    # Can try to use k-fold cross validation
+    # to check if the sgd code is indeed working
+    # do a sanity check for the case p=2
+    lamb = 1
+    p = 2
+    # sgd_model = model(lamb, p, all_data)

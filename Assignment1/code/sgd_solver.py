@@ -21,14 +21,26 @@ class one_train_info():
             return self.all_other_params[param]
 
 
-class reader(object):
-    def __init__(self, fname):
-        data_reader = pd.read_csv(fname, sep=',')
-        self.all_info_list = list()
-        for i in range(data_reader.last_valid_index() + 1):
-            new_train_info = one_train_info(data_reader.loc[i])
-            self.all_info_list.append(new_train_info)
-        return
+class one_test_info():
+    def __init__(self, param_list):
+        self.id1 = param_list[0]
+        self.all_other_params = param_list[2:]
+
+
+# class reader(object):
+#     def __init__(self, fname):
+#         data_reader = pd.read_csv(fname, sep=',')
+#         self.all_info_list = list()
+#         is_test = 'test' in fname
+#         if is_test:
+#             for i in range(data_reader.last_valid_index() + 1):
+#                 new_test_info = one_test_info(data_reader.loc[i], is_test)
+#                 self.all_info_list.append(new_train_info)
+#         else:
+#             for i in range(data_reader.last_valid_index() + 1):
+#                 new_train_info = one_train_info(data_reader.loc[i], is_test)
+#                 self.all_info_list.append(new_train_info)
+#         return
 
 
 class phi_holder(object):
@@ -85,17 +97,3 @@ class model(object):
             grad[i] = 2 * norm2_error_one_ind(x_ind) +
 
     def penalty_grad(self, w_ind):
-
-
-
-if __name__ == '__main__':
-    fname = '../data/train.csv'
-    all_data = reader(fname)
-    # Regression with p-norm regularization
-    # loss = ||y - y'||^2 + lambda * ||w||^p
-    # Can try to use k-fold cross validation
-    # to check if the sgd code is indeed working
-    # do a sanity check for the case p=2
-    lamb = 1
-    p = 2
-    sgd_model = model(lamb, p, all_data)
