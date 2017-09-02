@@ -3,6 +3,7 @@ from __future__ import division
 import pandas as pd
 import numpy as np
 
+
 class one_train_info():
     def __init__(self, param_list):
         self.id1 = param_list[0]
