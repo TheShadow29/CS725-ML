@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import pdb
 from sgd_template import get_feature_matrix, get_output
+import warnings
+warnings.filterwarnings("error")
 # class one_train_info():
 #     def __init__(self, param_list):
 #         self.id1 = param_list[0]
@@ -74,9 +76,11 @@ class model(object):
             # print(norm2_error)
             l1 = self.norm_error_one_ind(i)
             norm2_error += l1 ** 2
-
-        penalty = self.lamb * np.sum(np.power(np.abs(self.weights), self.p))
+        # norm2_error /= self.total_ind
+        # do not consider bias term in penalty
+        penalty = self.lamb * np.sum(np.power(np.abs(self.weights[:-1]), self.p))
         # print(penalty)
+        # print(norm2_error, penalty, self.lr)
         return norm2_error + penalty
 
     def norm_error_one_ind(self, ind):
@@ -91,10 +95,17 @@ class model(object):
     def gradient_one_point(self, x_ind):
         grad = np.zeros(self.weights.shape)
         # pdb.set_trace()
+        g1 = 2 * self.norm_error_one_ind(x_ind)
         for i in range(grad.shape[0]):
             # need x_ind for norm2_error_one_ind and w_ind for penaly_grad
-            grad[i] = 2 * self.norm_error_one_ind(x_ind) * self.phi_matrix[x_ind, i] + \
-                      self.penalty_grad(i)
+            try:
+                g_tmp = g1 * self.phi_matrix[x_ind, i]
+                g2 = self.penalty_grad(i)
+                grad[i] = g_tmp + g2
+            except Exception as e:
+                print(g1, x_ind, i)
+                print(self.weights)
+                raise e
         return grad
 
     def penalty_grad(self, w_ind):
@@ -104,8 +115,35 @@ class model(object):
     def sgd(self):
         # Stochastic gradient descent
         # Assuming no shuffling for now
-        for i in range(self.total_ind):
-            self.weights = self.one_weight_update(i)
+        curr_loss = self.complete_loss()
+        prev_loss = curr_loss + 10000
+        # for it in range(1000):
+        it = 0
+        while (prev_loss - curr_loss > 1000):
+            it += 1
+            for i in range(self.total_ind):
+
+                self.weights = self.one_weight_update(i)
+                # curr_loss = self.complete_loss()
+                if (i % 1e2 == 0):
+                    # print('i=', i)
+                    # if True:
+                    prev_loss = curr_loss
+                    curr_loss = self.complete_loss()
+                    print('i=', i, curr_loss, self.lr)
+                    if (curr_loss < prev_loss - 10):
+                        # print('Inc LR')
+                        self.lr = 1.1 * self.lr
+                    elif (curr_loss > prev_loss + 10):
+                        # print('Dec LR')
+                        self.lr = self.lr / 2
+
+            print('loss', curr_loss, 'Iter', it)
+
+            # if (curr_loss < prev_loss):
+            #     self.lr = 2 * self.lr
+            # else:
+            #     self.lr = self.lr / 2
         return
 
     def p2_solver(self):
@@ -113,7 +151,32 @@ class model(object):
         tmp_mat += self.lamb * np.identity(self.phi_matrix.shape[1])
         tmp_mat2 = np.linalg.inv(tmp_mat)
         tmp_mat3 = np.dot(self.phi_matrix.T, self.y_obs)
+        # self.weights = np.dot(tmp_mat2, tmp_mat3)
         return np.dot(tmp_mat2, tmp_mat3)
+
+    def p2_direct_solve(self):
+        self.weights = self.p2_solver()
+        return
+
+    def valid_accuracy(self, valid_phi, valid_output):
+        tot_valid_ind = valid_phi.shape[0]
+        err = 0
+        for ind in range(tot_valid_ind):
+            y_pred = np.dot(valid_phi[ind, :], self.weights)
+            tmp_err = valid_output[ind] - y_pred
+            err += tmp_err**2
+        rmse = (err / tot_valid_ind)**(0.5)
+        print(rmse)
+        return rmse
+
+    def test_printer(self, test_id_list, test_phi):
+        str_format = '{},{}\n'
+        str_to_write = str_format.format('Id', 'Output')
+        for ind, tid in enumerate(test_id_list):
+            y_pred = np.dot(test_phi[ind, :], self.weights)
+            str_to_write += str_format.format(tid, str(y_pred[0]))
+        with open('../eval/test_eval.csv', 'w') as f:
+            f.write(str_to_write)
 
 
 if __name__ == '__main__':
@@ -130,5 +193,16 @@ if __name__ == '__main__':
     # to check if the sgd code is indeed working
     # do a sanity check for the case p=2
     # sgd_model = model(lamb, p, all_data)
-    sgd_model = model(feature_matrix, out_vec, lambda_reg, p)
+    tot_points = feature_matrix.shape[0]
+    tr_pts = int(tot_points * 0.8)
+    sgd_model = model(feature_matrix[:tr_pts], out_vec[:tr_pts], lambda_reg, p)
     # sgd_model.sgd()
+    # sgd_model.complete_loss()
+    # test_feature_mat = get_feature_matrix('../data/test_features.csv')
+    sgd_model.p2_direct_solve()
+    # sgd_model.test_accuracy(feature_matrix[tr_pts:], out_vec[tr_pts:])
+    test_fname = '../data/test_features.csv'
+    test_data_reader = pd.read_csv(test_fname, sep=',')
+    test_id_list = test_data_reader['Id']
+    test_feature_mat = get_feature_matrix(test_fname)
+    sgd_model.test_printer(test_id_list, test_feature_mat)
