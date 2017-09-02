@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 import pandas as pd
 import pdb
-# from sgd_solver import one_train_info, reader, phi_holder, model
+from sgd_solver import model
 """
 NOTE: All functions mentioned below MUST be implemented
       All functions must be reproducible, i.e., repeated function calls with the
@@ -79,6 +79,9 @@ def get_weight_vector(feature_matrix, output, lambda_reg, p):
           from the get_feature_matrix() function but you can assume that all elements
           of this matrix will be of type float
     """
+    # sgd_model = model(feature_matrix, output, lambda_reg, p)
+    # sgd_model.sgd()
+
 
 
 def get_my_best_weight_vector():
@@ -99,18 +102,24 @@ def get_my_best_weight_vector():
           We expect this function to return fast. So you are encouraged to return a pickeled
           file after all your experiments with various values of p and lambda_reg.
     """
+    # directly pickle the best weight vector
 
 
-if __name__ == '__main__':
-    fname = '../data/train.csv'
-    # fname = '../data/test_features.csv'
-    feature_matrix = get_feature_matrix(fname)
-    out_vec = get_output(fname)
-    # Regression with p-norm regularization
-    # loss = ||y - y'||^2 + lambda * ||w||^p
-    # Can try to use k-fold cross validation
-    # to check if the sgd code is indeed working
-    # do a sanity check for the case p=2
-    lamb = 1
-    p = 2
-    # sgd_model = model(lamb, p, all_data)
+# if __name__ == '__main__':
+#     fname = '../data/train.csv'
+#     # fname = '../data/test_features.csv'
+#     feature_matrix = get_feature_matrix(fname)
+#     out_vec = get_output(fname)
+#     lambda_reg = 1
+#     p = 2
+#     weight_vector = get_weight_vector(feature_matrix, out_vec, lambda_reg, p)
+#     # Regression with p-norm regularization
+#     # loss = ||y - y'||^2 + lambda * ||w||^p
+#     # Can try to use k-fold cross validation
+#     # to check if the sgd code is indeed working
+#     # do a sanity check for the case p=2
+#     lambda_reg = 1
+#     p = 2
+#     # sgd_model = model(lamb, p, all_data)
+#     sgd_model = model(feature_matrix, out_vec, lambda_reg, p)
+#     sgd_model.sgd()
