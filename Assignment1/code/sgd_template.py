@@ -4,6 +4,7 @@ import numpy as np
 import pickle
 import pandas as pd
 import pdb
+import re
 # from sgd_solver import model
 """
 NOTE: All functions mentioned below MUST be implemented
@@ -28,21 +29,28 @@ def get_feature_matrix(file_path):
     is_test = 'test' in file_path
     # +1 is for bias
     # For now not using date and time
+    # Now using only month and hour
+    pat = re.compile(r'(\d*)-(\d*)-(\d*)\s(\d*):(\d*):(\d*)')
+    date_time = np.array(pat.findall('\n'.join(data_reader['date'])), dtype='int')
     if is_test:
-        phi_matrix = np.zeros((data_reader.last_valid_index() + 1,
+        phi_matrix = np.zeros((data_reader.last_valid_index() + 1, 3 +
                                len(data_reader.loc[0][2:]) + 1))
         for ind in range(data_reader.last_valid_index() + 1):
             d_info = data_reader.loc[ind]
-            phi_matrix[ind, :] = np.append(d_info[2:], 1)
+            tmp1 = np.append(d_info[2:], 1)
+            tmp2 = date_time[ind, 1:4]
+            phi_matrix[ind, :] = np.append(tmp2, tmp1)
 
     else:
         # pdb.set_trace()
-        phi_matrix = np.zeros((data_reader.last_valid_index() + 1,
+        phi_matrix = np.zeros((data_reader.last_valid_index() + 1, 3 +
                                len(data_reader.loc[0][2:-1]) + 1))
         # pdb.set_trace()
         for ind in range(data_reader.last_valid_index() + 1):
             d_info = data_reader.loc[ind]
-            phi_matrix[ind, :] = np.append(d_info[2:-1], 1)
+            tmp1 = np.append(d_info[2:-1], 1)
+            tmp2 = date_time[ind, 1:4]
+            phi_matrix[ind, :] = np.append(tmp2, tmp1)
 
     return phi_matrix
 

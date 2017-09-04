@@ -152,6 +152,7 @@ class model(object):
             #     self.lr = self.lr / 2
         return
 
+    # def ista(self):
     def p2_solver(self):
         tmp_mat = np.dot(self.phi_matrix.T, self.phi_matrix)
         tmp_mat += self.lamb * np.identity(self.phi_matrix.shape[1])
@@ -184,6 +185,7 @@ class model(object):
         with open('../eval/' + out_fname, 'w') as f:
             f.write(str_to_write)
 
+
 def plotter():
     dat_reader = pd.read_csv('../data/train.csv', sep=',')
 
@@ -192,15 +194,15 @@ def plotter():
     # for x in x_ax:
     #     x_ax_new.append(int(x.split(' ')[-1].split(':')[0]))
 
-    plt.plot(x_ax[:,1], dat_reader['Output'])
+    plt.plot(x_ax[:, 3], dat_reader['Output'])
     plt.show()
 
 
 if __name__ == '__main__':
 
-    pat = re.compile(r'(\d*)-(\d*)-(\d*)\s(\d*):(\d*):(\d*)')
-    plotter()
-    pdb.set_trace()
+    # pat = re.compile(r'(\d*)-(\d*)-(\d*)\s(\d*):(\d*):(\d*)')
+    # plotter()
+    # pdb.set_trace()
     fname = '../data/train.csv'
     # fname = '../data/test_features.csv'
     feature_matrix = get_feature_matrix(fname)
@@ -215,17 +217,18 @@ if __name__ == '__main__':
     # do a sanity check for the case p=2
     # sgd_model = model(lamb, p, all_data)
     tot_points = feature_matrix.shape[0]
-    tr_pts = int(tot_points * 0.8)
+    tr_pts = int(tot_points * 0.9)
     sgd_model = model(feature_matrix[:tr_pts], out_vec[:tr_pts], lambda_reg, p)
-    sgd_model.sgd(10, 1000)
-    # sgd_model.complete_loss()
+    # sgd_model.p2_direct_solve()
+    sgd_model.sgd(1000, 1000)
+    print(sgd_model.complete_loss())
     # test_feature_mat = get_feature_matrix('../data/test_features.csv')
     # sgd_model.p2_direct_solve()
     sgd_model.valid_accuracy(feature_matrix[tr_pts:], out_vec[tr_pts:])
-
-    # test_fname = '../data/test_features.csv'
-    # test_data_reader = pd.read_csv(test_fname, sep=',')
-    # test_id_list = test_data_reader['Id']
-    # test_feature_mat = get_feature_matrix(test_fname)
-    # out_fname = 'test_eval_l_' + str(lambda_reg) + '_p_' + str(p) + '.csv'
-    # sgd_model.test_printer(test_id_list, test_feature_mat, out_fname)
+    # sgd_model.valid_accuracy(feature_matrix, out_vec)
+    test_fname = '../data/test_features.csv'
+    test_data_reader = pd.read_csv(test_fname, sep=',')
+    test_id_list = test_data_reader['Id']
+    test_feature_mat = get_feature_matrix(test_fname)
+    out_fname = 'test_eval_l_' + str(lambda_reg) + '_p_' + str(p) + '_tr_' + str(tr_pts) + '.csv'
+    sgd_model.test_printer(test_id_list, test_feature_mat, out_fname)
