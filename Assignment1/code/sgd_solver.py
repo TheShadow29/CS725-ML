@@ -67,8 +67,9 @@ class model(object):
         self.weights = np.zeros(self.phi_matrix.shape[1])
         self.total_ind = self.phi_matrix.shape[0]
 
-        self.lr = 1e-7
-
+        self.lr = 1e-8
+        self.init_lr = 1e-8
+        self.dec_lr_count = 1
     # def reset_vars(self, feature_matrix, output_vec, )
 
     def complete_loss(self):
@@ -123,27 +124,44 @@ class model(object):
         assert type(batch) is int
         curr_loss = self.complete_loss()
         prev_loss = curr_loss + 10000
+        # old_weights = self.weights
+        # self.dec_lr_count = 1
+        same_lr = 0
+        # iter_arr = np.arange(nit)
         for it in range(nit):
             # it = 0
             # while (prev_loss - curr_loss > 100):
             # it += 1
-            for i in range(self.total_ind):
-
+            ind_arr = np.arange(self.total_ind)
+            if it > 0:
+                np.random.shuffle(ind_arr)
+            # for i in range(self.total_ind):
+            for i_n, i in enumerate(ind_arr):
                 self.weights = self.one_weight_update(i)
                 # curr_loss = self.complete_loss()
-                if (i % batch == 0):
+                if (i_n % batch == 0):
                     # print('i=', i)
                     # if True:
                     prev_loss = curr_loss
                     curr_loss = self.complete_loss()
-                    print('i=', i, curr_loss, self.lr)
+                    print('i=', i_n, curr_loss, self.lr)
                     if (curr_loss < prev_loss - 10):
-                        # print('Inc LR')
+                        print('Inc LR')
+                        # old_weights = self.weights
                         self.lr = 1.1 * self.lr
+                        self.init_lr = max(self.init_lr, self.lr)
                     elif (curr_loss > prev_loss + 10):
-                        # print('Dec LR')
-                        self.lr = self.lr / 2
-
+                        print('Dec LR')
+                        self.dec_lr_count += 1
+                        # self.weights = old_weights
+                        self.lr = self.init_lr / self.dec_lr_count
+                        same_lr = 0
+                    elif curr_loss > prev_loss:
+                        same_lr += 1
+                        if same_lr == 2:
+                            same_lr = 0
+                            self.dec_lr_count += 1
+                            self.lr = self.init_lr / self.dec_lr_count
             print('loss', curr_loss, 'Iter', it)
 
             # if (curr_loss < prev_loss):
@@ -185,6 +203,39 @@ class model(object):
         with open('../eval/' + out_fname, 'w') as f:
             f.write(str_to_write)
 
+    def soft_function(self, y_arr, lamb):
+        out_vec = np.zeros(y_arr.shape)
+        for ind, y in enumerate(y_arr):
+            if y >= lamb:
+                out_vec[ind] = y - lamb
+            elif y <= -lamb:
+                out_vec[ind] = y + lamb
+            else:
+                out_vec[ind] = 0
+        return out_vec
+
+    def p1_solver(self):
+        # for p=1, algorithm employed is ISTA
+        # Iterative Soft Thresholding Algorithm
+        k = 0
+        # eps = 1e-10
+        eig_values, eig_vecs = np.linalg.eig(np.dot(self.phi_matrix.T, self.phi_matrix))
+        alpha = np.max(eig_values)
+        curr_weights = self.weights
+        prev_weights = curr_weights + 10
+        # while np.linalg.norm(prev_weights - curr_weights) > eps:
+        while not np.allclose(prev_weights, curr_weights):
+            # print('Prev_w', prev_weights)
+            # print('Curr_w', curr_weights)
+            k += 1
+            prev_weights = curr_weights
+            tmp1 = self.weights
+            tmp2 = np.dot(self.phi_matrix.T, self.y_obs - np.dot(self.phi_matrix, self.weights))
+            tmp3 = tmp1 + tmp2 / alpha
+            curr_weights = self.soft_function(tmp3, self.lamb / (2 * alpha))
+            self.weights = curr_weights
+            print('Iter', k, 'loss', self.complete_loss())
+        return
 
 def plotter():
     dat_reader = pd.read_csv('../data/train.csv', sep=',')
@@ -208,7 +259,7 @@ if __name__ == '__main__':
     feature_matrix = get_feature_matrix(fname)
     out_vec = get_output(fname)
     lambda_reg = 1
-    p = 1.5
+    p = 1
     # weight_vector = get_weight_vector(feature_matrix, out_vec, lambda_reg, p)
     # Regression with p-norm regularization
     # loss = ||y - y'||^2 + lambda * ||w||^p
@@ -219,9 +270,10 @@ if __name__ == '__main__':
     tot_points = feature_matrix.shape[0]
     tr_pts = int(tot_points * 0.9)
     sgd_model = model(feature_matrix[:tr_pts], out_vec[:tr_pts], lambda_reg, p)
-    # sgd_model.p2_direct_solve()
-    sgd_model.sgd(1000, 1000)
-    print(sgd_model.complete_loss())
+    sgd_model.p2_direct_solve()
+    # sgd_model.sgd(1000, 1000)
+    sgd_model.p1_solver()
+    print(sgd_model.complete_loss())  #
     # test_feature_mat = get_feature_matrix('../data/test_features.csv')
     # sgd_model.p2_direct_solve()
     sgd_model.valid_accuracy(feature_matrix[tr_pts:], out_vec[tr_pts:])
