@@ -92,6 +92,7 @@ def get_weight_vector(feature_matrix, output, lambda_reg, p):
     tr_pts = int(tot_points * frac)  # Take a fraction of points for training
     sgd_model = model(feature_matrix[:tr_pts], output[:tr_pts], lambda_reg, p)
     # nit = no. of iterations, batch = batch size for the sgd
+    sgd_model.p2_direct_solve()
     sgd_model.sgd(1000, 1000)
     print('Final Loss', sgd_model.complete_loss())
     if frac != 1:
@@ -133,20 +134,27 @@ if __name__ == '__main__':
     lambda_reg = 1
     p = 1
     weights = get_weight_vector(feature_matrix, out_vec, lambda_reg, p)
-    # tot_points = feature_matrix.shape[0]
-    # tr_pts = int(tot_points * 1)  # Take all points for training
-    # sgd_model = model(feature_matrix[:tr_pts], out_vec[:tr_pts], lambda_reg, p)
-    # # sgd_model.p2_direct_solve()
-    # sgd_model.sgd(1000, 1000)
-    # # sgd_model.p1_solver()
-    # print(sgd_model.complete_loss())  #
-    # # test_feature_mat = get_feature_matrix('../data/test_features.csv')
-    # # sgd_model.p2_direct_solve()
-    # sgd_model.valid_accuracy(feature_matrix[tr_pts:], out_vec[tr_pts:])
-    # # sgd_model.valid_accuracy(feature_matrix, out_vec)
-    # test_fname = '../data/test_features.csv'
-    # test_data_reader = pd.read_csv(test_fname, sep=',')
-    # test_id_list = test_data_reader['Id']
-    # test_feature_mat = get_feature_matrix(test_fname)
-    # out_fname = 'test_eval_l_' + str(lambda_reg) + '_p_' + str(p) + '_tr_' + str(tr_pts) + '.csv'
+
+    test_fname = '../data/test_features.csv'
+    test_data_reader = pd.read_csv(test_fname, sep=',')
+    test_id_list = test_data_reader['Id']
+    test_feature_mat = get_feature_matrix(test_fname)
+    # out_fname = 'test_eval_l_' + str(lambda_reg) + '_p_' + str(p) + '.csv'
     # sgd_model.test_printer(test_id_list, test_feature_mat, out_fname)
+    # best_w_fname = '../eval/test_eval_l_1_p_1_tr_11700.pkl'
+    # best_w_fname = './w15_imp.pkl'
+    best_w_fname = './w_1_5.pkl'
+    out_fname = 'test_eval_l_' + str(lambda_reg) + '_p_' + str(p) + \
+                best_w_fname.split('/')[-1][:-4] + '.csv'
+    with open(out_fname, 'w') as g:
+        str_format = '{},{}\n'
+        str_to_write = str_format.format('Id', 'Output')
+        for ind, tid in enumerate(test_id_list):
+            y_pred = np.dot(test_feature_mat[ind, :],
+                            get_my_best_weight_vector(best_w_fname))
+            if len(y_pred.shape) == 0:
+                str_to_write += str_format.format(tid, str(y_pred))
+            else:
+                str_to_write += str_format.format(tid, str(y_pred[0]))
+
+        g.write(str_to_write)
