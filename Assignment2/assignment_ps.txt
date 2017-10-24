@@ -1,0 +1,72 @@
+Assignment 2: Implement Fully connected Neural Networks from scratch (DEADLINE: 31-10-17).
+No extensions will be allowed as TAs will be busy in placements activity.
+Template details will be updated soon.
+
+Kaggle link:
+
+https://www.kaggle.com/c/assignment-2-cs-725
+
+Use Python version 3.x only.
+Packages allowed:
+1. All inbuilt libraries
+2. Numpy
+3. Pandas
+
+Following modules will be graded:
+1. Normalization over the given data.
+2. Hyperparameters tuning:
+   Use K-fold Cross-validation over:
+	   (learning_rate, num_hidden_layers, regularizer_lambda):
+	   learning_rate = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+	   num_hidden_layers = [1, 2, 3, 4, 5]
+	   regularizer_lambda = [100, 10, 1, 1e-1, 1e-2]
+3. Cross-entropy with 2-norm regularizer.
+4. Momentum update in gradient descent.
+5. Comments
+
+Report:
+1. Mean, Standard Deviation for normalizing data
+2. Following table:
+   No. learning_rate num_hidden_layers regularizer_lambda objective
+   1   1e-1                1                    100                xyz
+   2   1e-1                1                    10                abc
+   3   1e-1                1                    1                blah
+   .
+   .
+   125 1e-5                5                    1e-2            qwe
+
+3. Detailed explanation for using momentum, batch, mini-batch and stochastic updates.
+4. Reason behind Tanh, ReLu, Leaky ReLu, Sigmoid usage.
+
+Trying following might drastically improve your kaggle ranking (non-graded modules):
+1. Regularization:
+	1.1 Dropout
+	2.2 Data Augmentation (#GenerateMoreData #MirrorImage #Rotation #Zoom)
+	2.3 Early Stopping (#BiasVarianceTradeoff)
+2. Optimization:
+	2.1 Weights Initialization (#Xavier #Random)
+	2.2 Biases Initialization (#Zeros #Ones)
+	2.3 Second Moment Gradient (#AdamOptimizer)
+	2.4 Variable Learning Rate
+3. Hyper-Parameter Tuning:
+	3.1 Batch Normalization
+	3.2 Nodes in hidden layers
+	3.2 Mini-Batch size
+4. Activation functions in hidden layers: Tanh, ReLu, Leaky ReLu, Sigmoid.
+
+
+Note: Using any other unfair means like using publicly available data sets, implementations, multiple accounts on Kaggle, etc. will be considered as plagiarism and so will copying code from internet and past years student submissions. We will check your submissions against code samples from internet and the old submissions and any instance of plagiarism will be reported to the institute's disciplinary committee.
+
+Submission Format:
+
+1. Create a folder with your roll number as name.
+
+2. Inside it have a "template.py" with all the template functions implemented.
+
+NOTE: Your roll number folder can also have many other folders and files and python code which your "template.py" can use. It need not have the test and train csv files.
+
+3. Have a file named 'output.csv'  which has your best predictions for the Kaggle test dataset. Make sure that you have also submitted this output.csv to Kaggle once.
+
+4. Have a 'Report.pdf' in the folder.
+
+5. Zip the folder to make roll_number.zip and submit.
