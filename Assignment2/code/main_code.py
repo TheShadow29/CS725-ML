@@ -55,7 +55,7 @@ class node(object):
 class layer(object):
     def __init__(self, num_nodes=5):
         self.node_list = list()
-        for _ in num_nodes:
+        for _ in range(num_nodes):
             new_node = node()
             self.node_list.append(new_node)
 
