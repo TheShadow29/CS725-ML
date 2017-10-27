@@ -27,15 +27,27 @@ class data_loader(object):
         return
 
 
+def batch_to_one_hot(vec, one_hot_vec_len):
+    one_hot_vec = np.zeros((vec.shape[0], one_hot_vec_len))
+    for ac_ind, ac_d in enumerate(vec):
+        one_hot_vec[ac_ind, ac_d] = 1
+    return one_hot_vec
+
+
 def cross_entropy(actual_data, pred_data):
     # pred data will be of shape batch_size x 10
     one_hot_vec_len = pred_data.shape[1]
-    batch_s = pred_data.shape[0]
+    # batch_s = pred_data.shape[0]
     out1 = np.log(pred_data)
-    actual_data_one_hot = np.zeros((batch_s, one_hot_vec_len))
-    actual_data_one_hot[:, actual_data] = 1
+    # actual_data_one_hot = np.zeros((batch_s, one_hot_vec_len))
+    # # actual_data_one_hot[:, actual_data] = 1
+    # for ac_ind, ac_d in enumerate(actual_data):
+    #     actual_data_one_hot[ac_ind, ac_d] = 1
+    actual_data_one_hot = batch_to_one_hot(actual_data, one_hot_vec_len)
     out2 = -np.multiply(actual_data_one_hot, out1)
-    return np.sum(out2)
+    out3 = np.sum(out2, axis=1)
+    # grad_out = np.divide(actual_data_one_hot, pred_data)
+    return out3
 
 
 # def pre_process(inp_data):
@@ -55,10 +67,34 @@ def cross_entropy(actual_data, pred_data):
 #     def reset_node(self):
 #         self.gradient_back = 0
 #         self.curr_val = 0
+def sigmoid(a):
+    # Assume a to be vector
+    tmp_a = 1 + np.exp(-a)
+    return 1./tmp_a
+
+
+def sigmoid_grad(a):
+    tmp_a = sigmoid(a)
+    return np.multiply(tmp_a, (1 - tmp_a))
+
+
+def relu(a):
+    if a > 0:
+        return a
+    else:
+        return np.zeros(a.shape)
+
+
+def relu_grad(a):
+    out = np.zeros(a.shape)
+    for i, a_i in enumerate(a):
+        if a_i > 0:
+            out[i] = 1
+    return out
 
 
 class lin_layer(object):
-    def __init__(self, inp_nodes, out_nodes):
+    def __init__(self, inp_nodes, out_nodes, act='lin'):
         # self.node_list = list()
         # for _ in range(num_nodes):
         #     new_node = node()
@@ -68,6 +104,11 @@ class lin_layer(object):
         self.out_nodes = out_nodes
         self.W = np.zeros((self.out_nodes, self.inp_nodes))
         self.b = np.zeros(self.out_nodes)
+        self.activation = act
+        self.W_grad = np.zeros(self.W.shape)
+        self.b_grad = np.zeros(self.b.shape)
+        self.a = np.zeros(self.b.shape)
+        self.h = np.zeros(self.b.shape)
         return
 
     def weights_l2(self):
@@ -78,7 +119,31 @@ class lin_layer(object):
         # return np.sqrt(norm)
 
     def forward(self, inp):
-        return np.dot(self.W, inp) + self.b
+        self.a = np.dot(self.W, inp) + self.b
+        if self.activation == 'lin':
+            self.h = self.a
+        if self.activation == 'sigmoid':
+            self.h = sigmoid(self.a)
+        if self.activation == 'relu':
+            self.h = relu(self.a)
+        return self.h
+
+    def backward(self, g, h_prev):
+        # g is the backprop grad from the layer above
+        # g is assumed to be a vector
+        if self.activation == 'lin':
+            act_grad = np.ones(self.a.shape)
+        if self.activation == 'sigmoid':
+            act_grad = sigmoid_grad(self.a)
+        if self.activation == 'relu':
+            act_grad = relu_grad(self.a)
+
+        g_new = np.multiply(g, act_grad)
+        self.b_grad = g_new
+        self.W_grad = np.dot(g_new[:, None], h_prev[None, :])
+        g_out = np.dot(g_new, self.W)
+        g_out = np.squeeze(g_out)
+        return g_out
 
 
 class neural_network(object):
@@ -88,6 +153,7 @@ class neural_network(object):
         self.list_layers.append(fc1)
         fc2 = lin_layer(50, 10)
         self.list_layers.append(fc2)
+        self.tot_layers = len(self.list_layers)
         return
 
     def weights_l2(self):
@@ -117,6 +183,14 @@ class neural_network(object):
             out_list.append(out)
         return np.array(out_list)
 
+    def back_prop(self, g_init):
+        # g_init =
+        g_prev = g_init
+        for i in range(self.tot_layers-1, -1, -1):
+            h_prev = self.list_layers[i-1].h
+            g_next = self.list_layers[i].backward(g_prev, h_prev)
+            g_prev = g_next
+
 
 class model(object):
     def __init__(self, nn, train_data, test_data, loss_fn='cel2', optimizer='sgd'):
@@ -130,15 +204,18 @@ class model(object):
         num_train_data = self.train_data.last_loc + 1
         for epoch in range(num_epoch):
             for _ in np.arange(0, num_train_data, batch_size):
-                train_data_new = self.train_data.next_item(num=batch_size)
-                x_train_data = train_data_new[:, :-1]
-                y_train_data = train_data_new[:, -1]
-                y_pred_data = self.nn.get_output(x_train_data)
-                # pdb.set_trace()
-                curr_loss = self.loss(y_train_data, y_pred_data)
-                # self.nn.update_weights()
-                print(curr_loss)
+                self.train_iter1(batch_size)
 
+    def train_iter1(self, batch_size=4):
+        train_data_new = self.train_data.next_item(num=batch_size)
+        x_train_data = train_data_new[:, :-1]
+        y_train_data = train_data_new[:, -1]
+        y_pred_data = self.nn.get_output(x_train_data)
+        # pdb.set_trace()
+        curr_loss = self.loss(y_train_data, y_pred_data)
+        g_init = self.g_init(y_train_data, y_pred_data)
+        self.nn.back_prop(g_init)
+        print(curr_loss, g_init)
     # def test_net(self):
     #     num_corr = 0
     #     tot_num = 0
@@ -149,7 +226,13 @@ class model(object):
     def loss(self, actual_data, pred_data):
         ce_loss = cross_entropy(actual_data, pred_data)
         l2_loss = self.nn.weights_l2()
-        return ce_loss + l2_loss
+        # pdb.set_trace()
+        return np.sum(ce_loss) + l2_loss
+
+    def g_init(self, actual_data, pred_data):
+        actual_data_one_hot = batch_to_one_hot(actual_data, pred_data.shape[1])
+        tmp_out = np.divide(actual_data_one_hot, pred_data)
+        return np.sum(tmp_out, axis=0)
 
 
 if __name__ == '__main__':
