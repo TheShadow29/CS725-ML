@@ -93,6 +93,28 @@ def relu_grad(a):
     return out
 
 
+def softmax(inp):
+    # Assume inp is an array
+    n_t = np.exp(inp)
+    z_t = np.sum(n_t)
+    return n_t / z_t
+
+
+def softmax_grad(q, l):
+    # q = softmax(l)
+    rows = q.shape[0]
+    cols = l.shape[0]
+    out_grad = np.zeros((rows, cols))
+    # pdb.set_trace()
+    for i in range(rows):
+        for j in range(cols):
+            if i != j:
+                out_grad[i, j] = -q[i] * q[j]
+            else:
+                out_grad[i, j] = q[i]*(1 - q[i])
+    return out_grad
+
+
 class lin_layer(object):
     def __init__(self, inp_nodes, out_nodes, act='lin'):
         # self.node_list = list()
@@ -106,9 +128,12 @@ class lin_layer(object):
         self.b = np.zeros(self.out_nodes)
         self.activation = act
         self.W_grad = np.zeros(self.W.shape)
+        self.W_grad_list = list()
         self.b_grad = np.zeros(self.b.shape)
+        self.b_grad_list = list()
         self.a = np.zeros(self.b.shape)
         self.h = np.zeros(self.b.shape)
+        self.lr = 1e-6
         return
 
     def weights_l2(self):
@@ -126,6 +151,8 @@ class lin_layer(object):
             self.h = sigmoid(self.a)
         if self.activation == 'relu':
             self.h = relu(self.a)
+        # if self.activation == 'softmax':
+        #     self.h = softmax(self.a)
         return self.h
 
     def backward(self, g, h_prev):
@@ -137,13 +164,32 @@ class lin_layer(object):
             act_grad = sigmoid_grad(self.a)
         if self.activation == 'relu':
             act_grad = relu_grad(self.a)
+        # if self.activation == 'softmax':
+        #     act_grad = softmax_grad(self.a)
 
         g_new = np.multiply(g, act_grad)
-        self.b_grad = g_new
-        self.W_grad = np.dot(g_new[:, None], h_prev[None, :])
+        b_gradt = g_new
+        W_gradt = np.dot(g_new[:, None], h_prev[None, :])
+        self.W_grad_list.append(W_gradt)
+        self.b_grad_list.append(b_gradt)
         g_out = np.dot(g_new, self.W)
         g_out = np.squeeze(g_out)
         return g_out
+
+    def update_weights(self, optim='sgd'):
+        if optim == 'sgd':
+            curr_batch_size = len(self.W_grad_list)
+            self.W_grad = np.sum(self.W_grad_list, axis=0) / curr_batch_size
+            self.b_grad = np.sum(self.b_grad_list, axis=0) / curr_batch_size
+            self.W = self.W - self.lr * self.W_grad
+            self.b = self.b - self.lr * self.b_grad
+            self.clear_grad_lists()
+            return
+
+    def clear_grad_lists(self):
+        del self.W_grad_list[:]
+        del self.b_grad_list[:]
+        return
 
 
 class neural_network(object):
@@ -162,17 +208,11 @@ class neural_network(object):
             norm += l.weights_l2() ** 2
         return np.sqrt(norm)
 
-    def softmax(self, inp):
-        # Assume inp is an array
-        n_t = np.exp(inp)
-        z_t = np.sum(n_t)
-        return n_t / z_t
-
     def feed_forward(self, inp):
         # pdb.set_trace()
         out = self.list_layers[0].forward(inp)
         out = self.list_layers[1].forward(out)
-        out = self.softmax(out)
+        out = softmax(out)
         return out
 
     def get_output(self, inp):
@@ -183,13 +223,27 @@ class neural_network(object):
             out_list.append(out)
         return np.array(out_list)
 
-    def back_prop(self, g_init):
-        # g_init =
+    def back_prop(self, g_init_list, inp_list):
+        for ind, g_ in enumerate(g_init_list):
+            # pdb.set_trace()
+            self.back_prop_one_g(g_, inp_list[ind])
+        return
+
+    def back_prop_one_g(self, g_init, inp):
         g_prev = g_init
         for i in range(self.tot_layers-1, -1, -1):
+            # pdb.set_trace()
             h_prev = self.list_layers[i-1].h
+            if i == 0:
+                h_prev = inp
             g_next = self.list_layers[i].backward(g_prev, h_prev)
             g_prev = g_next
+
+        return
+
+    def update_weights(self, optim='sgd'):
+        for l in self.list_layers:
+            l.update_weights(optim)
 
 
 class model(object):
@@ -206,16 +260,17 @@ class model(object):
             for _ in np.arange(0, num_train_data, batch_size):
                 self.train_iter1(batch_size)
 
-    def train_iter1(self, batch_size=4):
+    def train_iter1(self, batch_size=1):
         train_data_new = self.train_data.next_item(num=batch_size)
         x_train_data = train_data_new[:, :-1]
         y_train_data = train_data_new[:, -1]
         y_pred_data = self.nn.get_output(x_train_data)
         # pdb.set_trace()
         curr_loss = self.loss(y_train_data, y_pred_data)
-        g_init = self.g_init(y_train_data, y_pred_data)
-        self.nn.back_prop(g_init)
-        print(curr_loss, g_init)
+        g_init_list = self.g_init_list(y_train_data, y_pred_data)
+        self.nn.back_prop(g_init_list, x_train_data)
+        # self.nn.update_weights(optim='sgd')
+        print(curr_loss, g_init_list)
     # def test_net(self):
     #     num_corr = 0
     #     tot_num = 0
@@ -229,10 +284,18 @@ class model(object):
         # pdb.set_trace()
         return np.sum(ce_loss) + l2_loss
 
-    def g_init(self, actual_data, pred_data):
+    def g_init_list(self, actual_data, pred_data):
         actual_data_one_hot = batch_to_one_hot(actual_data, pred_data.shape[1])
-        tmp_out = np.divide(actual_data_one_hot, pred_data)
-        return np.sum(tmp_out, axis=0)
+        g_init_list = np.divide(actual_data_one_hot, pred_data)
+        # g_init_tmp = np.sum(tmp_out, axis=0)
+        # pdb.set_trace()
+        h_last = self.nn.list_layers[-1].h
+        g_init_out_list = list()
+        for i in range(pred_data.shape[0]):
+            grad_softmax = softmax_grad(pred_data[i, :], h_last)
+            g_init_out = np.dot(g_init_list[i, :], grad_softmax)
+            g_init_out_list.append(g_init_out)
+        return g_init_out_list
 
 
 if __name__ == '__main__':
