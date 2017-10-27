@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import division
 import numpy as np
 import pandas as pd
 import pdb
@@ -95,9 +97,15 @@ def relu_grad(a):
 
 def softmax(inp):
     # Assume inp is an array
-    n_t = np.exp(inp)
-    z_t = np.sum(n_t)
-    return n_t / z_t
+    # pdb.set_trace()
+    # n_t = np.exp(inp)
+    # z_t = np.sum(n_t)
+    outp = np.zeros(inp.shape)
+    for ind, i in enumerate(inp):
+        new_inp = inp - i
+        outp[ind] = 1./np.sum(np.exp(new_inp))
+
+    return outp
 
 
 def softmax_grad(q, l):
@@ -124,7 +132,9 @@ class lin_layer(object):
         # self.tot_nodes = len(self.node_list)
         self.inp_nodes = inp_nodes
         self.out_nodes = out_nodes
-        self.W = np.zeros((self.out_nodes, self.inp_nodes))
+        # self.W = np.random.random((self.out_nodes, self.inp_nodes))
+        # self.W = np.zeros((self.out_nodes, self.inp_nodes))
+        self.W = np.ones((self.out_nodes, self.inp_nodes))
         self.b = np.zeros(self.out_nodes)
         self.activation = act
         self.W_grad = np.zeros(self.W.shape)
@@ -133,7 +143,7 @@ class lin_layer(object):
         self.b_grad_list = list()
         self.a = np.zeros(self.b.shape)
         self.h = np.zeros(self.b.shape)
-        self.lr = 1e-6
+        self.lr = 1e-3
         return
 
     def weights_l2(self):
@@ -158,6 +168,7 @@ class lin_layer(object):
     def backward(self, g, h_prev):
         # g is the backprop grad from the layer above
         # g is assumed to be a vector
+        # pdb.set_trace()
         if self.activation == 'lin':
             act_grad = np.ones(self.a.shape)
         if self.activation == 'sigmoid':
@@ -166,7 +177,7 @@ class lin_layer(object):
             act_grad = relu_grad(self.a)
         # if self.activation == 'softmax':
         #     act_grad = softmax_grad(self.a)
-
+        # pdb.set_trace()
         g_new = np.multiply(g, act_grad)
         b_gradt = g_new
         W_gradt = np.dot(g_new[:, None], h_prev[None, :])
@@ -178,6 +189,7 @@ class lin_layer(object):
 
     def update_weights(self, optim='sgd'):
         if optim == 'sgd':
+            pdb.set_trace()
             curr_batch_size = len(self.W_grad_list)
             self.W_grad = np.sum(self.W_grad_list, axis=0) / curr_batch_size
             self.b_grad = np.sum(self.b_grad_list, axis=0) / curr_batch_size
@@ -260,7 +272,7 @@ class model(object):
             for _ in np.arange(0, num_train_data, batch_size):
                 self.train_iter1(batch_size)
 
-    def train_iter1(self, batch_size=1):
+    def train_iter1(self, batch_size=4):
         train_data_new = self.train_data.next_item(num=batch_size)
         x_train_data = train_data_new[:, :-1]
         y_train_data = train_data_new[:, -1]
@@ -269,7 +281,7 @@ class model(object):
         curr_loss = self.loss(y_train_data, y_pred_data)
         g_init_list = self.g_init_list(y_train_data, y_pred_data)
         self.nn.back_prop(g_init_list, x_train_data)
-        # self.nn.update_weights(optim='sgd')
+        self.nn.update_weights(optim='sgd')
         print(curr_loss, g_init_list)
     # def test_net(self):
     #     num_corr = 0
@@ -282,6 +294,7 @@ class model(object):
         ce_loss = cross_entropy(actual_data, pred_data)
         l2_loss = self.nn.weights_l2()
         # pdb.set_trace()
+        # return np.sum(ce_loss) + l2_loss
         return np.sum(ce_loss) + l2_loss
 
     def g_init_list(self, actual_data, pred_data):
@@ -299,6 +312,7 @@ class model(object):
 
 
 if __name__ == '__main__':
+    np.random.seed(0)
     train_fname = '../data/train.csv'
     test_fname = '../data/test.csv'
     train_data = data_loader(train_fname)
