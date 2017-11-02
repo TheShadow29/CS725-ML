@@ -103,6 +103,7 @@ def softmax(inp):
     outp = np.zeros(inp.shape)
     for ind, i in enumerate(inp):
         new_inp = inp - i
+        # pdb.set_trace()
         outp[ind] = 1./np.sum(np.exp(new_inp))
 
     return outp
@@ -143,7 +144,7 @@ class lin_layer(object):
         self.b_grad_list = list()
         self.a = np.zeros(self.b.shape)
         self.h = np.zeros(self.b.shape)
-        self.lr = 1e-2
+        self.lr = 1e-3
         self.lr_it = 1
         return
 
@@ -272,18 +273,19 @@ class model(object):
         self.num_train_data = self.num_train_data_tot * self.train_frac
         return
 
-    def train_net(self, num_epoch=15, batch_size=4):
-
+    def train_net(self, num_epoch=15, batch_size=1):
+        # pdb.se
         for epoch in range(num_epoch):
             for it in np.arange(0, self.num_train_data, batch_size):
                 curr_loss = self.train_iter1(batch_size)
                 if it % 10000 == 0:
                     val_acc = self.validation_net()
                     print(it / 10000, curr_loss, val_acc)
+                    print(self.train_data.curr_ind)
                     # print(val_acc)
         return
 
-    def train_iter1(self, batch_size=4):
+    def train_iter1(self, batch_size=1):
         train_data_new = self.train_data.next_item(num=batch_size)
         x_train_data = train_data_new[:, :-1]
         y_train_data = train_data_new[:, -1]
@@ -300,6 +302,7 @@ class model(object):
     def validation_net(self):
         num_corr = 0
         tot_num = 0
+        tr_curr_ind = self.train_data.curr_ind
         self.train_data.reset_curr_ind(self.num_train_data)
         val_data_num = 500
         # for it in np.arange(self.num_train_data, self.num_train_data_tot):
@@ -314,6 +317,7 @@ class model(object):
                 num_corr += 1
             tot_num += 1
         assert tot_num == val_data_num
+        self.train_data.reset_curr_ind(tr_curr_ind)
         return num_corr / tot_num
 
     def loss(self, actual_data, pred_data):
@@ -325,16 +329,19 @@ class model(object):
 
     def g_init_list(self, actual_data, pred_data):
         actual_data_one_hot = batch_to_one_hot(actual_data, pred_data.shape[1])
-        g_init_list = -np.divide(actual_data_one_hot, pred_data)
-        # g_init_tmp = np.sum(tmp_out, axis=0)
-        # pdb.set_trace()
-        h_last = self.nn.list_layers[-1].h
-        g_init_out_list = list()
-        for i in range(pred_data.shape[0]):
-            grad_softmax = softmax_grad(pred_data[i, :], h_last)
-            g_init_out = np.dot(g_init_list[i, :], grad_softmax)
-            g_init_out_list.append(g_init_out)
-        return g_init_out_list
+        g_init_list = -(actual_data_one_hot - pred_data)
+        return g_init_list
+        # actual_data_one_hot = batch_to_one_hot(actual_data, pred_data.shape[1])
+        # g_init_list = -np.divide(actual_data_one_hot, pred_data)
+        # # g_init_tmp = np.sum(tmp_out, axis=0)
+        # # pdb.set_trace()
+        # h_last = self.nn.list_layers[-1].h
+        # g_init_out_list = list()
+        # for i in range(pred_data.shape[0]):
+        #     grad_softmax = softmax_grad(pred_data[i, :], h_last)
+        #     g_init_out = np.dot(g_init_list[i, :], grad_softmax)
+        #     g_init_out_list.append(g_init_out)
+        # return g_init_out_list
 
 
 if __name__ == '__main__':
