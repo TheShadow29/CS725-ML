@@ -321,8 +321,8 @@ class lin_layer(object):
         # pdb.set_trace()
         self.b_grad_tmp = np.sum(b_gradt_mat, axis=0)
         self.W_grad_tmp = W_gradt_mat
-        if (np.log10(np.abs(self.W_grad_tmp)) > 10).any():
-            pdb.set_trace()
+        # if (np.log10(np.abs(self.W_grad_tmp)) > 10).any():
+        #     pdb.set_trace()
         g_out = np.dot(g_new, self.W)
         # g_out = np.squeeze(g_out)
         # pdb.set_trace()
@@ -343,10 +343,14 @@ class lin_layer(object):
             return
 
         elif optim == 'mom':
-            self.vw_cur = self.gamma * self.vw_prev + self.lr * self.W_grad / self.lr_it
-            self.W = self.W - self.vw_cur
-            self.vb_cur = self.gamma * self.vb_prev + self.lr * self.b_grad / self.lr_it
-            self.b = self.b - self.vb_cur
+            # self.vw_cur = self.gamma * self.vw_prev + self.lr * self.W_grad / self.lr_it
+            self.vw_cur = self.gamma * self.vw_prev - self.lr * self.W_grad / self.lr_it
+            # self.W = self.W - self.vw_cur
+            self.W = self.W + self.vw_cur
+            # self.vb_cur = self.gamma * self.vb_prev + self.lr * self.b_grad / self.lr_it
+            self.vb_cur = self.gamma * self.vb_prev - self.lr * self.b_grad / self.lr_it
+            # self.b = self.b - self.vb_cur
+            self.b = self.b + self.vb_cur
             self.vw_prev = self.vw_cur
             self.vb_prev = self.vb_cur
             # self.lr_it += 1     #
@@ -370,9 +374,9 @@ class neural_network(object):
         self.list_layers = list()
         fc1 = lin_layer(inp_nodes, 100, batch_size, 'relu')
         self.list_layers.append(fc1)
-        fc2 = lin_layer(100, 100, batch_size, 'relu')
-        self.list_layers.append(fc2)
-        fc3 = lin_layer(100, self.outp_nodes, batch_size, 'lin')
+        # fc2 = lin_layer(100, 100, batch_size, 'relu')
+        # self.list_layers.append(fc2)
+        fc3 = lin_layer(100, self.outp_nodes, batch_size, 'relu')
         self.list_layers.append(fc3)
         self.tot_layers = len(self.list_layers)
         self.y_pred_list = np.zeros((self.batch_size, self.outp_nodes))
@@ -398,22 +402,22 @@ class neural_network(object):
         norm = 0
         for l in self.list_layers:
             norm += l.weights_l2() ** 2
-        return np.sqrt(norm)
+        return self.lambda_reg * np.sqrt(norm)
 
-    def train_nicely(self, xtd, ytd):
+    # def train_nicely(self, xtd, ytd):
 
-        for i in range(self.batch_size):
-            # self.y_pred_list[i, :] = self.feed_forward(xtd[i])
-            y_pred_tmp = self.feed_forward(xtd[i])
-            # y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
-            g_init = np.zeros(self.outp_nodes)
-            g_init[ytd[i]] = 1
-            g_init = - g_init + y_pred_tmp
-            # pdb.set_trace()
-            self.bp(g_init, xtd[i])
-            self.y_pred_list[i] = y_pred_tmp
-        # self.y_pred_list[self.y_pred_list < self.eps] = 1e-5
-        return self.y_pred_list
+    #     for i in range(self.batch_size):
+    #         # self.y_pred_list[i, :] = self.feed_forward(xtd[i])
+    #         y_pred_tmp = self.feed_forward(xtd[i])
+    #         # y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
+    #         g_init = np.zeros(self.outp_nodes)
+    #         g_init[ytd[i]] = 1
+    #         g_init = - g_init + y_pred_tmp
+    #         # pdb.set_trace()
+    #         self.bp(g_init, xtd[i])
+    #         self.y_pred_list[i] = y_pred_tmp
+    #     # self.y_pred_list[self.y_pred_list < self.eps] = 1e-5
+    #     return self.y_pred_list
 
     def train_better(self, xtd, ytd):
         y_pred_tmp = self.feed_forward_batch(xtd)
@@ -435,28 +439,29 @@ class neural_network(object):
         # pdb.set_trace()
         out = self.list_layers[0].forward_batch(inp)
         out = self.list_layers[1].forward_batch(out)
-        out = self.list_layers[2].forward_batch(out)
+        # out = self.list_layers[2].forward_batch(out)
         # if np.isinf(out).any():
         # pdb.set_trace()
         out = softmax_batch(out)
         return out
 
     def test_nicely(self, xtd):
+        # y_test_list = self.feed_forward_batch(xtd)  #
         # pdb.set_trace()
         y_test_list = list()
         for i in range(xtd.shape[0]):
             # self.y_pred_list[i, :] = self.feed_forward(xtd[i])
             y_pred_tmp = self.feed_forward(xtd[i])
-            y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
+            # y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
             y_test_list.append(y_pred_tmp)
-            # g_init = np.zeros(self.outp_nodes)
-            # g_init[ytd[i]] = 1
-            # g_init = - g_init + y_pred_tmp
-            # pdb.set_trace()
-            # self.bp(g_init, xtd[i])
+        # g_init = np.zeros(self.outp_nodes)
+        # g_init[ytd[i]] = 1
+        # g_init = - g_init + y_pred_tmp
+        # pdb.set_trace()
+        # self.bp(g_init, xtd[i])
         # self.y_pred_list[self.y_pred_list < self.eps] = 1e-5
 
-        return np.argmax(np.array(y_test_list), axis=1)
+        return np.argmax(y_test_list, axis=1)
 
     def bp(self, g_init, inp):
         g_prev = g_init
@@ -470,7 +475,7 @@ class neural_network(object):
         # pdb.set_trace()
         out = self.list_layers[0].forward(inp)
         out = self.list_layers[1].forward(out)
-        out = self.list_layers[2].forward(out)
+        # out = self.list_layers[2].forward(out)
         # if np.isinf(out).any():
         # pdb.set_trace()
         out = softmax(out)
@@ -484,23 +489,23 @@ class neural_network(object):
             out_list.append(out)
         return np.array(out_list)
 
-    def back_prop(self, g_init_list, inp_list):
-        for ind, g_ in enumerate(g_init_list):
-            # pdb.set_trace()
-            self.back_prop_one_g(g_, inp_list[ind], ind)
-        return
+    # def back_prop(self, g_init_list, inp_list):
+    #     for ind, g_ in enumerate(g_init_list):
+    #         # pdb.set_trace()
+    #         self.back_prop_one_g(g_, inp_list[ind], ind)
+    #     return
 
-    def back_prop_one_g(self, g_init, inp, ind):
-        g_prev = g_init
-        for i in range(self.tot_layers-1, -1, -1):
-            # pdb.set_trace()
-            h_prev = self.list_layers[i-1].h_list[ind]
-            if i == 0:
-                h_prev = inp
-            g_next = self.list_layers[i].backward(g_prev, h_prev, ind)
-            g_prev = g_next
+    # def back_prop_one_g(self, g_init, inp, ind):
+    #     g_prev = g_init
+    #     for i in range(self.tot_layers-1, -1, -1):
+    #         # pdb.set_trace()
+    #         h_prev = self.list_layers[i-1].h_list[ind]
+    #         if i == 0:
+    #             h_prev = inp
+    #         g_next = self.list_layers[i].backward(g_prev, h_prev, ind)
+    #         g_prev = g_next
 
-        return
+    #     return
 
     def update_weights(self, optim='sgd'):
         for l in self.list_layers:
@@ -518,50 +523,52 @@ class model(object):
         self.num_train_data_tot = self.train_data.last_loc + 1
         self.num_train_data = int(self.num_train_data_tot * self.train_frac)
         self.batch_size = batch_size
-        # self.val_data_num = self.num_train_data_tot - self.num_train_data
-        self.val_data_num = 500
+        self.val_data_num = self.num_train_data_tot - self.num_train_data
+        # self.val_data_num = 500
         self.val_start_id = 0
         self.y_pred_list = [0 for i in range(self.val_data_num)]
         self.y_val_data_list = [0 for i in range(self.val_data_num)]
 
         return
 
-    def train_net(self, num_epoch=30):
+    def train_net(self, num_epoch=20):
         # pdb.se
         for epoch in range(num_epoch):
-            for it in np.arange(0, self.num_train_data_tot, self.batch_size):
+            for it in np.arange(0, self.num_train_data, self.batch_size):
                 curr_loss = self.train_iter2()
-                if it % 100000 == 0:
-                    print(it / 100000)
+                # if it % 100000 == 0:
+                #     print(it / 100000)
                 #     val_acc = self.validation_net()
                 #     print(it / 10000, curr_loss, val_acc)
                 #     print(self.train_data.curr_ind)
-            if True:
-                val_acc = self.validation_net()
-                print(epoch, curr_loss, val_acc)
-                print(self.train_data.curr_ind)
-                # print(val_acc)
+            # if True:
+            #     val_acc = self.validation_net()
+            #     print(epoch, curr_loss, val_acc)
+            #     print(self.train_data.curr_ind)
+            #     print(val_acc)
 
             self.train_data.reset_curr_ind(0)
+        val_acc = self.validation_net()
+        print(val_acc)
         return
 
-    def train_iter1(self):
-        # pdb.set_trace()
-        train_data_new = self.train_data.next_item(num=self.batch_size)
-        # pdb.set_trace()
-        x_train_data = train_data_new[:, :-1]
-        y_train_data = train_data_new[:, -1].astype(np.int)
-        y_pred_data = self.nn.get_output(x_train_data)
-        # pdb.set_trace()
-        curr_loss = self.loss(y_train_data, y_pred_data)
-        g_init_list = self.g_init_list(y_train_data, y_pred_data)
-        # pdb.set_trace()
-        self.nn.back_prop(g_init_list, x_train_data)
-        # self.nn.update_weights(optim='sgd')
-        self.nn.update_weights(optim='mom')
-        # print(curr_loss, g_init_list)
-        # print(curr_loss)
-        return curr_loss
+    # def train_iter1(self):
+    #     # pdb.set_trace()
+    #     train_data_new = self.train_data.next_item(num=self.batch_size)
+    #     # pdb.set_trace()
+    #     x_train_data = train_data_new[:, :-1]
+    #     y_train_data = train_data_new[:, -1].astype(np.int)
+    #     y_pred_data = self.nn.get_output(x_train_data)
+    #     # pdb.set_trace()
+    #     curr_loss = self.loss(y_train_data, y_pred_data)
+    #     g_init_list = self.g_init_list(y_train_data, y_pred_data)
+    #     # pdb.set_trace()
+    #     self.nn.back_prop(g_init_list, x_train_data)
+    #     # self.nn.update_weights(optim='sgd')
+    #     self.nn.update_weights(optim='mom')
+    #     # print(curr_loss, g_init_list)
+    #     # print(curr_loss)
+    #     return curr_loss
 
     def train_iter2(self):
         train_data_new = self.train_data.next_item(num=self.batch_size)
@@ -624,10 +631,10 @@ class model(object):
         # return np.sum(ce_loss) + l2_loss
         return np.sum(ce_loss)/ce_loss.shape[0] + l2_loss
 
-    def g_init_list(self, actual_data, pred_data):
-        actual_data_one_hot = batch_to_one_hot(actual_data, pred_data.shape[1])
-        g_init_list = -(actual_data_one_hot - pred_data)
-        return g_init_list
+    # def g_init_list(self, actual_data, pred_data):
+    #     actual_data_one_hot = batch_to_one_hot(actual_data, pred_data.shape[1])
+    #     g_init_list = -(actual_data_one_hot - pred_data)
+    #     return g_init_list
         # actual_data_one_hot = batch_to_one_hot(actual_data, pred_data.shape[1])
         # g_init_list = -np.divide(actual_data_one_hot, pred_data)
         # # g_init_tmp = np.sum(tmp_out, axis=0)
@@ -652,13 +659,25 @@ if __name__ == '__main__':
     simple_model = model(simple_net, train_data, test_data, batch_size)
     # (learning_rate, num_hidden_layers, regularizer_lambda):
     # learning_rate = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
-    # num_hidden_layers = [1, 2, 3, 4, 5]
-    # regularizer_lambda = [100, 10, 1, 1e-1, 1e-2]
-    # for lr in learning_rate:
+    learning_rate = [1e-2, 1e-3, 1e-5]
+    num_hidden_layers = [2, 3]
+    regularizer_lambda = [10, 1, 1e-1, 1e-7]
+    # regularizer_lambda = [1e-7, 100, 10, 1, 1e-1, 1e-2]
+    # for lr in reversed(learning_rate):
+    lr = 1e-2
+    reg = 1e-6
+    print('lr', lr, 'reg', reg)
+    simple_model.nn.set_lamb(reg)
+    simple_model.nn.set_lr(lr)
+    simple_model.train_net(10)
+    simple_model.train_net(10)
+    # for lr in reversed(learning_rate):
     #     simple_model.nn.set_lr(lr)
+    #     # for reg in reversed(regularizer_lambda):
     #     for reg in regularizer_lambda:
     #         simple_model.nn.set_lamb(reg)
-
+    #         print('lr', lr, 'reg', reg)
+    #         simple_model.train_net(5)
     # train_csv_data = pd.read_csv(train_fname, sep=',')
     # test_csv_data = pd.read_csv(test_fname, sep=',')
     # Things to try :

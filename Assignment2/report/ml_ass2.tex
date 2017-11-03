@@ -13,7 +13,7 @@
 \usepackage{float}
 \usepackage{amsmath}
 \DeclareMathOperator*{\argmax}{\arg\!\max}
-\title{CS 747 : Foundations of Intelligent Learning Agents Assignment 3}
+\title{CS 725 : Machine Learning Assignment 2}
 \author{Arka Sadhu - 140070011}
 \date{\today}
 
@@ -21,7 +21,23 @@
 \maketitle
 
 \section{General Procedure Employed}
-Backprop Main Algorithm derivations
+The core algorithm is based on gradient descent which requires us to calculate the gradients with respect to the weights and biases. I have explained the general procedure for the same.
+
+\begin{itemize}
+\item Feed Forward:
+  \begin{itemize}
+  \item Feed forward is pretty straightword with all the layers having relu activation. The input of the previous layer is passed on to the next layer. The last layer has a softmax which converts the raw inputs into respective probability distribution.
+  \end{itemize}
+\item Back Propagation Derivation
+  \begin{itemize}
+  \item The last layer has a softmax. Let the output of the last layer be $h^l$ and the output of the softmax be $q$. The true probability distribution (in terms of one-hot vector) is $p$. The cross-entropy loss is $$L = - \sum_i p_i log(q_i)$$. We find that $$\frac{dL}{dh_i^l} = q_i - p_i$$ where i is the index of the node (the derivation follows from chain rule).
+  \item The main backprop algorithm is as follows:
+    Suppose $g$ is the gradient vector from the next layer which is being back propagated and $h_p$ is the output of the previous layer. First we do $$g = g \cdot activation\_gradients$$ where $\cdot$ denotes the hadamard product. The activation gradient depends on the input from the feed forward input values. Now we have $$\nabla_bL = g$$ and $$\nabla_W = gh^T$$
+  \item The g vector is again updated as $$g = g W$$ and is then passed onto the previous layer (back proped).
+  \item This allows for the updates of the gradients.
+  \end{itemize}
+\end{itemize}
+
 
 \section{Data Normalization}
 The normalization parameters obtained were as follows:
@@ -36,10 +52,112 @@ Number of Epochs in all cases are kept constant and equal to 10.
 K-fold validation is done with k=5.
 The average accuracy is reported.
 
-(learning_rate, num_hidden_layers, regularizer_lambda):
-learning_rate = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
-num_hidden_layers = [1, 2, 3, 4, 5]
-regularizer_lambda = [100, 10, 1, 1e-1, 1e-2]
+% (learning_rate, num_hidden_layers, regularizer_lambda):
+Parameters:
+\begin{itemize}
+\item Learning rate = [1e-2, 1e-3]
+\item Number of hidden layers = [2, 3]
+\item Number of nodes in hidden layer = 100
+\item Regularizer lambda = [1e-6, 1e-7]
+\item Batch Size = 200
+\item Epochs = 10, 20
+\end{itemize}
 
+The regularizer values are chosen based on experiments and it was found that a regularizer of higher order didn't give any good results and hence the range is restricted to the order of 6 and 7. Similarly for learning rate it was found that learning rate = 0.1, it lead to explosion of the weights and led to run time error at cases of random initialization. For learning rate below 0.001 it took a lot more iterations and hence the results are reproduced.
+The number of hidden layers was constrained to 2 and 3 so as not to increase the parameters too much which would in turn lead to a lot more iterations to converge and perhaps fall victim to the local minimas created in the process.
 
+\begin{table}[H]
+\centering
+\caption{Hyperparameter Adjustment Table}
+\label{t:1}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+learning rate & Regularization & Hidden Layers & Accuracy(epoch=10) & Accuracy(epoch=20) \\ \hline
+0.01          & 1e-6           & 3             & 0.7813             & 0.97108125         \\ \hline
+              & 1e-7           & 3             & 0.79523125         & 0.98913125         \\ \hline
+0.001         & 1e-6           & 3             & 0.5557             & 0.66523125         \\ \hline
+              & 1e-7           & 3             & 0.55566875         & 0.66495625         \\ \hline
+0.01          & 1e-6           & 2             & 0.7589625          & 0.9286125          \\ \hline
+              & 1e-7           & 2             & 0.76018125         & 0.92965            \\ \hline
+0.001         & 1e-6           & 2             & 0.55074375         & 0.569125           \\ \hline
+              & 1e-7           & 2             & 0.55075            & 0.56914375         \\ \hline
+\end{tabular}
+\end{table}
+
+The tuned hyperparameters are :
+\begin{itemize}
+\item Learning Rate = 1e-2
+\item Hidden Layers = 3
+\item Lambda Regularizer = 1e-7
+\end{itemize}
+
+\section{Gradient Updates}
+\begin{itemize}
+\item Stochastic Gradient Descent:
+  \begin{itemize}
+  \item The updates are made using each data point. When we see one data point and then back propagate the gradients we immediately want to change the direction of weights to be updated.
+  \item This often takes a lot of time because of extra computation.
+  \item The step size to be taken is usually annealed. It can also be computed in an exact search method which will minimize the current loss.
+  \item The path to the optimal point is often traversed in a zig-zag fashion.
+  \item It is stochastic in the sense of picking up a random data point.
+  \end{itemize}
+\item Batch Gradient Descent:
+  \begin{itemize}
+  \item Ideally we would like to go in the direction of gradient descent which will lead to maximum decrease in loss.
+  \item To get this direction we should ideally calculate the gradient direction of each of the data points.
+  \item Unfortunately the computations involved become exponential and hence this method is never used in practice unless data size is fairly less.
+  \end{itemize}
+\item Mini-Batch Stochastic Gradient Descent:
+  \begin{itemize}
+  \item The mini-batch approach is a mid-way between the two approaches above.
+  \item It considers a smaller number of points in batches. The idea behind this is that the batch of data will correspond to the expected direction of the best gradient descent.
+  \item It basically takes average of the different gradient of the batches and hopes to go in the expected direction.
+  \item The path to optimal point is a lot less zig-zagged compared to stochastic gradient descent.
+  \end{itemize}
+\item Momentum Based Methods:
+  \begin{itemize}
+  \item An extremely big problem in training neural networks comes because of being stuck at local minima which is usually the case with vanilla gradient descent methods.
+  \item To circumvent this problem momentum based methods keeps track of a velocity term.
+  \item In some sense velocity term keeps track of all the previous gradient directions. Therefore if the gradient direction is pretty steep and suddenly a local minimum is encountered the velocity term will force the algorithm to go ahead even though it say the local minimum.
+  \item The term velocity is correlated with the usual physics law.
+  \item In essence it allows us to get out of shallow boundaries.
+  \end{itemize}
+\end{itemize}
+
+Observations in this Assignment:
+\begin{itemize}
+\item The vanilla stochastic gradient descent takes way too much time to approach to the local minima.
+\item Mini-Batch Stochastic gradient descent takes a much more uniform path but it still takes a lot of time to converge.
+\item Momentum Based Method gave the best result in all cases.
+\item The momentum based method adds an extra hyper parameter but it is not tuned and in general it is agreed that 0.9 is a good value.
+\end{itemize}
+
+\section{Activation Functions}
+Different activation functions are used for different reasons. In this Assignment ReLu is predominantly used but the usage of all activation functions are detailed.
+\begin{itemize}
+\item Sigmoid:
+  \begin{itemize}
+  \item It gives output in the range $[0,1]$.
+  \item It is an approximation for the step function and has the advantage of being continuous and differentiable and therefore being able to Backprop efficiently.
+  \item Unfortunately it suffers from the problem of vanishing gradients when the input is not near 0 and hence the gradients almost disappear when going to initial layers.
+  \end{itemize}
+\item Tanh:
+  \begin{itemize}
+  \item It is similar to sigmoid and shares all other properties except that the output is in the range $[-1, 1]$
+  \item Has similar advantages and disadvantages to sigmoid, with the extra advantage of being able to go into the negative domain as well.
+  \end{itemize}
+\item ReLu:
+  \begin{itemize}
+  \item It is simply the function $max(0, x)$ so the output range is in the positive real numbers.
+  \item The gradients can only be 0 or 1 depending on the input.
+  \item It is empirically proven that ReLu is able to converge much faster than both sigmoid and tanh and is predominantly used.
+  \item It is an approximation for the piece wise linear curves in higher dimensions.
+  \end{itemize}
+\item Leaky ReLu:
+  \begin{itemize}
+  \item It is the same as ReLu for positive inputs but for negative inputs instead of all zeros, it gives a small negative number instead.
+  \item This allows for non-zero gradient for negative inputs as well.
+  \item Shares the advantages of ReLu.
+  \end{itemize}
+\end{itemize}
 \end{document}
