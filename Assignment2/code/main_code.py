@@ -207,6 +207,7 @@ class lin_layer(object):
         self.vb_prev = 0
         self.forward_count = 0
         self.thresh = 0.01
+        self.lambda_reg = 1e-7
         # pdb.set_trace()
         return
 
@@ -315,7 +316,7 @@ class lin_layer(object):
         b_gradt_mat = g_new
         # W_gradt_mat = np.dot(g_new.T, h_prev) + 2 * 100 * self.W
         # W_gradt_mat = np.dot(g_new.T, h_prev) + 2 * 100 * self.W
-        W_gradt_mat = np.dot(g_new.T, h_prev) + 2 * 1e-7 * self.W
+        W_gradt_mat = np.dot(g_new.T, h_prev) + 2 * self.lambda_reg * self.W
         # W_grad_mat = np.zeros(self.W_grad)
         # pdb.set_trace()
         self.b_grad_tmp = np.sum(b_gradt_mat, axis=0)
@@ -377,6 +378,20 @@ class neural_network(object):
         self.y_pred_list = np.zeros((self.batch_size, self.outp_nodes))
         self.eps = 1e-5
         self.all_z = np.zeros(self.outp_nodes)
+        self.lr = 0
+        self.lambda_reg = 0
+        return
+
+    def set_lr(self, lr):
+        for l in self.list_layers:
+            l.lr = lr
+        self.lr = lr
+        return
+
+    def set_lamb(self, lamb):
+        for l in self.list_layers:
+            l.lambda_reg = lamb
+        self.lambda_reg = lamb
         return
 
     def weights_l2(self):
@@ -390,7 +405,7 @@ class neural_network(object):
         for i in range(self.batch_size):
             # self.y_pred_list[i, :] = self.feed_forward(xtd[i])
             y_pred_tmp = self.feed_forward(xtd[i])
-            y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
+            # y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
             g_init = np.zeros(self.outp_nodes)
             g_init[ytd[i]] = 1
             g_init = - g_init + y_pred_tmp
@@ -402,7 +417,7 @@ class neural_network(object):
 
     def train_better(self, xtd, ytd):
         y_pred_tmp = self.feed_forward_batch(xtd)
-        y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
+        # y_pred_tmp[y_pred_tmp < self.eps] = 1e-5
         g_init = batch_to_one_hot(ytd, self.outp_nodes)
         g_init = -g_init + y_pred_tmp
         self.back_batch(g_init, xtd)
@@ -511,10 +526,10 @@ class model(object):
 
         return
 
-    def train_net(self, num_epoch=20):
+    def train_net(self, num_epoch=30):
         # pdb.se
         for epoch in range(num_epoch):
-            for it in np.arange(0, self.num_train_data, self.batch_size):
+            for it in np.arange(0, self.num_train_data_tot, self.batch_size):
                 curr_loss = self.train_iter2()
                 if it % 100000 == 0:
                     print(it / 100000)
@@ -635,6 +650,15 @@ if __name__ == '__main__':
     batch_size = 200
     simple_net = neural_network(10, batch_size)
     simple_model = model(simple_net, train_data, test_data, batch_size)
+    # (learning_rate, num_hidden_layers, regularizer_lambda):
+    # learning_rate = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+    # num_hidden_layers = [1, 2, 3, 4, 5]
+    # regularizer_lambda = [100, 10, 1, 1e-1, 1e-2]
+    # for lr in learning_rate:
+    #     simple_model.nn.set_lr(lr)
+    #     for reg in regularizer_lambda:
+    #         simple_model.nn.set_lamb(reg)
+
     # train_csv_data = pd.read_csv(train_fname, sep=',')
     # test_csv_data = pd.read_csv(test_fname, sep=',')
     # Things to try :
